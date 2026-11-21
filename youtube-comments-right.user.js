@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         YouTube: Comments on the Right
 // @namespace    https://github.com/sslinkup/youtube-comments-on-right
-// @version      4.5.0
+// @version      4.6.0
 // @description  Moves comments next to the video, locks the page, and gives the right column its own scrollbar.
 // @author       sslinkup
 // @license      MIT
@@ -12,8 +12,9 @@
 // @match        https://youtube.com/watch*
 // @grant        none
 // @run-at       document-idle
-// Security: no network requests, no storage access, no privileged APIs,
-// no eval/innerHTML. Only moves a DOM node and injects static CSS.
+// Security: no network requests by default (only if showDislikeCount is enabled),
+// no storage access, no privileged APIs, no eval/innerHTML.
+// Only moves DOM nodes and injects static CSS.
 // ==/UserScript==
 
 (function () {
@@ -39,6 +40,8 @@
     speedMin: 0.1,                // minimum playback speed
     speedMax: 2,                  // maximum playback speed
     screenshotToClipboard: true,  // copy screenshot to clipboard instead of downloading
+    showDislikeCount: false,      // opt-in: fetch estimated dislikes from Return YouTube Dislike
+    dislikeApi: 'https://returnyoutubedislikeapi.com/votes?videoId=',
   };
 
   const COMMENT_SELECTORS = ['#comments', 'ytd-comments', 'ytd-comments-renderer'];
@@ -47,6 +50,7 @@
   let applyTimer = null;
   let lastStatus = '';
   let lastDeepSearch = 0;
+  let lastDislikeVideoId = null;
   const hiddenEls = new Set();
 
   function isWatchPage() {
@@ -67,6 +71,7 @@
     });
     hiddenEls.forEach((el) => { el.style.display = ''; });
     hiddenEls.clear();
+    lastDislikeVideoId = null;
     lastStatus = '';
   }
 
@@ -199,6 +204,18 @@
       }
       ` : ''}
 
+      ${CONFIG.showDislikeCount ? `
+      #yt-dislike-count {
+        display: inline-flex;
+        align-items: center;
+        height: 36px;
+        padding: 0 8px;
+        font: 12px Roboto, Arial, sans-serif;
+        opacity: .85;
+        white-space: nowrap;
+      }
+      ` : ''}
+
       ${CONFIG.addPlayerButtons ? `
       #yt-extra-controls {
         display: flex;
@@ -278,6 +295,50 @@
     const quality = player.getPlaybackQuality();
     const label = QUALITY_LABELS[quality] || String(quality || 'HD').toUpperCase();
     if (button.textContent !== label) button.textContent = label;
+  }
+
+  function formatCount(value) {
+    const n = Number(value);
+    if (!isFinite(n)) return '—';
+    if (n >= 1e9) return (n / 1e9).toFixed(1).replace(/\.0$/, '') + 'B';
+    if (n >= 1e6) return (n / 1e6).toFixed(1).replace(/\.0$/, '') + 'M';
+    if (n >= 1e3) return (n / 1e3).toFixed(1).replace(/\.0$/, '') + 'K';
+    return String(n);
+  }
+
+  async function loadDislikeCount(videoId, container) {
+    let el = document.getElementById('yt-dislike-count');
+    if (!el) {
+      el = document.createElement('span');
+      el.id = 'yt-dislike-count';
+      el.title = 'Estimated dislikes (Return YouTube Dislike)';
+      el.textContent = '…';
+      const like = container.querySelector('segmented-like-dislike-button-view-model');
+      if (like) container.insertBefore(el, like.nextSibling);
+      else container.appendChild(el);
+    }
+    try {
+      const response = await fetch(CONFIG.dislikeApi + encodeURIComponent(videoId), { credentials: 'omit' });
+      if (!response.ok) throw new Error('HTTP ' + response.status);
+      const data = await response.json();
+      if (lastDislikeVideoId !== videoId) return;
+      el.textContent = '👎 ' + formatCount(data.dislikes);
+      el.title = 'Estimated dislikes: ' + Number(data.dislikes).toLocaleString() + ' (Return YouTube Dislike)';
+    } catch (e) {
+      if (lastDislikeVideoId !== videoId) return;
+      el.textContent = '👎 —';
+      el.title = 'Dislike data unavailable: ' + e.message;
+    }
+  }
+
+  function maybeLoadDislikes() {
+    if (!CONFIG.showDislikeCount) return;
+    const videoId = new URLSearchParams(location.search).get('v');
+    if (!videoId || videoId === lastDislikeVideoId) return;
+    const container = document.querySelector('#top-level-buttons-computed');
+    if (!container) return;
+    lastDislikeVideoId = videoId;
+    loadDislikeCount(videoId, container);
   }
 
   function stepSpeed(direction) {
@@ -403,6 +464,7 @@
     const root = flexy.shadowRoot || document;
     ensurePlayerButtons(root);
     updateQualityLabel();
+    maybeLoadDislikes();
 
     let comments = root.querySelector('#comments') || root.querySelector('ytd-comments');
     let column = root.querySelector('#secondary');

@@ -12,6 +12,7 @@ A userscript that moves YouTube's comments section into the right-hand column ne
 - Caps the video description to a scrollable box (auto-expands it first).
 - Adds **speed down / speed up / quality / screenshot** buttons directly before the Like button.
 - Speed changes in **0.1× steps**; the quality button shows the **current resolution**; the screenshot button uses a camera icon and **copies the current frame to the clipboard**.
+- Optional **estimated dislike count** next to Like (opt-in; uses the Return YouTube Dislike API).
 - Moves the playlist panel above the comments and caps its item list to a scrollable height.
 - Keeps YouTube's lazy loading of additional comments working.
 - Survives YouTube's in-page (SPA) navigation and **restores normal page scrolling** when you leave a video for Home, Channel, or Library.
@@ -55,6 +56,8 @@ Edit the `CONFIG` object near the top of the script:
 | `speedStep` | `0.1` | Playback speed change per click. |
 | `speedMin` / `speedMax` | `0.1` / `2` | Playback speed range. |
 | `screenshotToClipboard` | `true` | Copy screenshot to clipboard; set `false` to download the PNG instead. |
+| `showDislikeCount` | `false` | Opt-in: show estimated dislikes next to Like (makes a network request). |
+| `dislikeApi` | Return YouTube Dislike URL | API endpoint used for dislike estimates. |
 
 ## Troubleshooting
 
@@ -80,7 +83,9 @@ Replace `YOUR_USERNAME` in the userscript header's `@namespace`, `@author`, `@ho
 
 ## Security and privacy
 
-The script makes **no network requests** (no `fetch`, `XMLHttpRequest`, or `GM_xmlhttpRequest`), reads **no credentials or storage** (cookies, `localStorage`, form values), and uses **no privileged APIs**. It contains no `eval` or `innerHTML`. It only moves an existing DOM node and injects a static `<style>` block, and is restricted to YouTube watch pages by `@match`.
+By default the script makes **no network requests**. If you set `showDislikeCount: true`, it makes one anonymous `fetch` per video to the Return YouTube Dislike API (`credentials: 'omit'` — no cookies) and caches the result per video ID. It reads **no credentials or storage** (cookies, `localStorage`, form values) and uses **no privileged APIs**. It contains no `eval` or `innerHTML`. It only moves existing DOM nodes and injects a static `<style>` block, and is restricted to YouTube watch pages by `@match`.
+
+Dislike counts are community estimates, not official YouTube data, and can be inaccurate.
 
 As with any userscript, the main risks are supply-chain related: keep 2FA enabled on the publishing GitHub account and review version changes before allowing auto-updates.
 
