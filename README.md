@@ -9,6 +9,8 @@ A userscript that moves YouTube's comments section into the right-hand column ne
 - Moves `#comments` into the secondary (right) column.
 - Locks the watch page to the viewport so it can't scroll.
 - Gives the right column its own scrollbar (`overflow-y: auto`, `overscroll-behavior: contain`).
+- Caps the video description to a scrollable box (auto-expands it first).
+- Moves the playlist panel above the comments and caps its item list to a scrollable height.
 - Keeps YouTube's lazy loading of additional comments working.
 - Survives YouTube's in-page (SPA) navigation.
 - Supports both the current light-DOM watch page and older shadow-DOM layouts.
@@ -39,6 +41,11 @@ Edit the `CONFIG` object near the top of the script:
 | `scrollableSidebar` | `true` | Give the right column its own scrollbar. |
 | `topOffset` | `56` | Height of YouTube's masthead in pixels; used to size the column. |
 | `showDebugBadge` | `false` | Set `true` to show the green diagnostic badge when troubleshooting. |
+| `descriptionScrollable` | `true` | Cap the description height and give it its own scrollbar. |
+| `descriptionMaxHeight` | `140` | Height in pixels of the description box. |
+| `expandDescription` | `true` | Auto-click "more" so the full description is scrollable. |
+| `playlistOnTop` | `true` | Move the playlist panel above the comments. |
+| `playlistItemsHeight` | `160` | Height in pixels of the playlist's internal item scroller. |
 
 ## Troubleshooting
 

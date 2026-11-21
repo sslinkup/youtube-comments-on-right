@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         YouTube: Comments on the Right
 // @namespace    https://github.com/sslinkup/youtube-comments-on-right
-// @version      4.0.1
+// @version      4.1.0
 // @description  Moves comments next to the video, locks the page, and gives the right column its own scrollbar.
 // @author       sslinkup
 // @license      MIT
@@ -26,6 +26,11 @@
     scrollableSidebar: true,   // right column scrolls independently
     topOffset: 56,             // YouTube masthead height in px
     showDebugBadge: false,     // set true to show the diagnostic badge
+    descriptionScrollable: true,  // cap the description height and scroll it
+    descriptionMaxHeight: 140,    // description box height in px
+    expandDescription: true,      // auto-click "more" to show the full description
+    playlistOnTop: true,          // move the playlist above the comments
+    playlistItemsHeight: 160,     // height of the playlist's internal scroller in px
   };
 
   const COMMENT_SELECTORS = ['#comments', 'ytd-comments', 'ytd-comments-renderer'];
@@ -115,6 +120,21 @@
       ` : ''}
 
       #secondary-inner #comments { margin-top: 0 !important; }
+
+      ${CONFIG.descriptionScrollable ? `
+      #description-inner {
+        max-height: ${CONFIG.descriptionMaxHeight}px !important;
+        overflow-y: auto !important;
+        overscroll-behavior: contain;
+        scrollbar-gutter: stable;
+      }
+      ` : ''}
+
+      ${CONFIG.playlistOnTop ? `
+      ytd-playlist-panel-renderer#playlist #items {
+        max-height: ${CONFIG.playlistItemsHeight}px !important;
+      }
+      ` : ''}
     `;
     // A Document can't take appendChild() — styles belong in <head> there.
     const host = root === document ? (document.head || document.documentElement) : root;
@@ -148,8 +168,22 @@
       target.insertBefore(comments, target.firstChild);
     }
 
+    // Expand the description once so its capped box actually has content to scroll.
+    if (CONFIG.expandDescription) {
+      const expand = root.querySelector('#description-inline-expander #expand');
+      if (expand && expand.offsetParent !== null) expand.click();
+    }
+
+    // Put the playlist panel directly above the comments.
+    if (CONFIG.playlistOnTop) {
+      const playlist = root.querySelector('ytd-playlist-panel-renderer#playlist');
+      if (playlist && (playlist.parentElement !== target || playlist.nextElementSibling !== comments)) {
+        target.insertBefore(playlist, comments);
+      }
+    }
+
     if (CONFIG.hideRecommendations) {
-      target.querySelectorAll(':scope > :not(#comments)').forEach((el) => {
+      target.querySelectorAll(':scope > :not(#comments):not(ytd-playlist-panel-renderer#playlist)').forEach((el) => {
         if (el.style.display !== 'none') el.style.display = 'none';
       });
     }
