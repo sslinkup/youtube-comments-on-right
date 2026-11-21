@@ -8,7 +8,7 @@ A userscript that moves YouTube's comments section into the right-hand column ne
 
 - Moves `#comments` into the secondary (right) column.
 - Locks the watch page to the viewport so it can't scroll.
-- Gives the right column its own scrollbar (`overflow-y: auto`, `overscroll-behavior: contain`).
+- Splits the right column into a **pinned comments pane** and a **separately scrolling recommendations pane** below it.
 - Caps the video description to a scrollable box (auto-expands it first).
 - Moves the playlist panel above the comments and caps its item list to a scrollable height.
 - Keeps YouTube's lazy loading of additional comments working.
@@ -46,6 +46,9 @@ Edit the `CONFIG` object near the top of the script:
 | `expandDescription` | `true` | Auto-click "more" so the full description is scrollable. |
 | `playlistOnTop` | `true` | Move the playlist panel above the comments. |
 | `playlistItemsHeight` | `160` | Height in pixels of the playlist's internal item scroller. |
+| `pinnedComments` | `true` | Pin comments at the top and scroll recommendations in a separate pane below. |
+| `commentsFlex` | `1` | Relative height share of the comments pane. |
+| `recsFlex` | `1` | Relative height share of the recommendations pane. |
 
 ## Troubleshooting
 

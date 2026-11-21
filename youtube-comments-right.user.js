@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         YouTube: Comments on the Right
 // @namespace    https://github.com/sslinkup/youtube-comments-on-right
-// @version      4.1.2
+// @version      4.2.0
 // @description  Moves comments next to the video, locks the page, and gives the right column its own scrollbar.
 // @author       sslinkup
 // @license      MIT
@@ -31,6 +31,9 @@
     expandDescription: true,      // auto-click "more" to show the full description
     playlistOnTop: true,          // move the playlist above the comments
     playlistItemsHeight: 160,     // height of the playlist's internal scroller in px
+    pinnedComments: true,         // pin comments at top, scroll recommendations below
+    commentsFlex: 1,              // relative height of the comments pane
+    recsFlex: 1,                  // relative height of the recommendations pane
   };
 
   const COMMENT_SELECTORS = ['#comments', 'ytd-comments', 'ytd-comments-renderer'];
@@ -132,11 +135,44 @@
       #secondary-inner {
         height: ${columnHeight} !important;
         max-height: ${columnHeight} !important;
+        ${CONFIG.pinnedComments ? `
+        display: flex !important;
+        flex-direction: column !important;
+        overflow: hidden !important;
+        ` : `
         overflow-y: auto !important;
         overflow-x: hidden !important;
         overscroll-behavior: contain;
         scrollbar-gutter: stable;
+        `}
       }
+      ${CONFIG.pinnedComments ? `
+      #secondary-inner > ytd-playlist-panel-renderer#playlist {
+        flex: 0 0 auto !important;
+        order: 0;
+      }
+      #secondary-inner > #comments {
+        flex: ${CONFIG.commentsFlex} 1 0 !important;
+        min-height: 0 !important;
+        overflow-y: auto !important;
+        overscroll-behavior: contain;
+        scrollbar-gutter: stable;
+        order: 1;
+      }
+      ${CONFIG.hideRecommendations ? '' : `
+      #secondary-inner > #related {
+        flex: ${CONFIG.recsFlex} 1 0 !important;
+        min-height: 0 !important;
+        overflow-y: auto !important;
+        overscroll-behavior: contain;
+        scrollbar-gutter: stable;
+        order: 2;
+      }
+      `}
+      #secondary-inner > :not(#comments):not(#related):not(ytd-playlist-panel-renderer#playlist) {
+        display: none !important;
+      }
+      ` : ''}
       ` : ''}
 
       #secondary-inner #comments { margin-top: 0 !important; }
