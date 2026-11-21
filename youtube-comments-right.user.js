@@ -1,15 +1,15 @@
 // ==UserScript==
 // @name         YouTube: Comments on the Right
 // @namespace    https://github.com/sslinkup/youtube-comments-on-right
-// @version      4.1.1
+// @version      4.1.2
 // @description  Moves comments next to the video, locks the page, and gives the right column its own scrollbar.
 // @author       sslinkup
 // @license      MIT
 // @homepage     https://github.com/sslinkup/youtube-comments-on-right
 // @source       https://github.com/sslinkup/youtube-comments-on-right/raw/main/youtube-comments-right.user.js
 // @supportURL   https://github.com/sslinkup/youtube-comments-on-right/issues
-// @match        https://www.youtube.com/watch?*
-// @match        https://youtube.com/watch?*
+// @match        https://www.youtube.com/watch*
+// @match        https://youtube.com/watch*
 // @grant        none
 // @run-at       document-idle
 // Security: no network requests, no storage access, no privileged APIs,
