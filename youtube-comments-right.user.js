@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         YouTube: Comments on the Right
 // @namespace    https://github.com/sslinkup/youtube-comments-on-right
-// @version      4.2.0
+// @version      4.3.0
 // @description  Moves comments next to the video, locks the page, and gives the right column its own scrollbar.
 // @author       sslinkup
 // @license      MIT
@@ -34,6 +34,7 @@
     pinnedComments: true,         // pin comments at top, scroll recommendations below
     commentsFlex: 1,              // relative height of the comments pane
     recsFlex: 1,                  // relative height of the recommendations pane
+    addPlayerButtons: true,       // add speed / quality / screenshot buttons near Like
   };
 
   const COMMENT_SELECTORS = ['#comments', 'ytd-comments', 'ytd-comments-renderer'];
@@ -55,6 +56,8 @@
     if (style) style.remove();
     const badge = document.getElementById('yt-comments-right-badge');
     if (badge) badge.remove();
+    const controls = document.getElementById('yt-extra-controls');
+    if (controls) controls.remove();
     document.querySelectorAll('ytd-watch-flexy').forEach((f) => {
       f.style.removeProperty('--ytd-watch-flexy-sidebar-width');
     });
@@ -191,10 +194,132 @@
         max-height: ${CONFIG.playlistItemsHeight}px !important;
       }
       ` : ''}
+
+      ${CONFIG.addPlayerButtons ? `
+      #yt-extra-controls {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin-right: 8px;
+      }
+      #yt-extra-controls button {
+        height: 36px;
+        min-width: 36px;
+        padding: 0 12px;
+        border: 0;
+        border-radius: 18px;
+        background: rgba(128,128,128,.15);
+        color: inherit;
+        font: 500 14px/1 Roboto, Arial, sans-serif;
+        cursor: pointer;
+      }
+      #yt-extra-controls button:hover { background: rgba(128,128,128,.30); }
+      #yt-extra-controls button:disabled { opacity: .4; cursor: default; }
+      #cr-speed-label {
+        min-width: 30px;
+        text-align: center;
+        font: 12px Roboto, Arial, sans-serif;
+        opacity: .85;
+      }
+      ` : ''}
     `;
     // A Document can't take appendChild() — styles belong in <head> there.
     const host = root === document ? (document.head || document.documentElement) : root;
     host.appendChild(style);
+  }
+
+  function getPlayer() {
+    const el = document.querySelector('ytd-player');
+    return el && typeof el.getPlayer === 'function' ? el.getPlayer() : null;
+  }
+
+  function updateSpeedUI() {
+    const player = getPlayer();
+    const label = document.getElementById('cr-speed-label');
+    const down = document.getElementById('cr-speed-down');
+    const up = document.getElementById('cr-speed-up');
+    if (!player || !label) return;
+    const rates = (player.getAvailablePlaybackRates() || [1]).slice().sort((a, b) => a - b);
+    const rate = player.getPlaybackRate();
+    const index = rates.indexOf(rate);
+    label.textContent = rate + '×';
+    if (down) down.disabled = index <= 0;
+    if (up) up.disabled = index < 0 || index >= rates.length - 1;
+  }
+
+  function stepSpeed(direction) {
+    const player = getPlayer();
+    if (!player) return;
+    const rates = (player.getAvailablePlaybackRates() || [1]).slice().sort((a, b) => a - b);
+    const index = rates.indexOf(player.getPlaybackRate());
+    const next = rates[Math.min(Math.max(index + direction, 0), rates.length - 1)];
+    player.setPlaybackRate(next);
+    updateSpeedUI();
+  }
+
+  function openQualityMenu() {
+    const settings = document.querySelector('.ytp-settings-button');
+    if (!settings) return;
+    settings.click();
+    setTimeout(() => {
+      const items = [...document.querySelectorAll('.ytp-menuitem')];
+      const quality = items.find((item) =>
+        /^quality$/i.test((item.querySelector('.ytp-menuitem-label')?.textContent || '').trim())
+      );
+      if (quality) quality.click();
+    }, 80);
+  }
+
+  function captureFrame() {
+    const video = document.querySelector('video');
+    if (!video || !video.videoWidth) return;
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      canvas.getContext('2d').drawImage(video, 0, 0);
+      const link = document.createElement('a');
+      link.href = canvas.toDataURL('image/png');
+      link.download = 'youtube-frame-' + Date.now() + '.png';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (e) {
+      console.warn('[comments-right] screenshot failed:', e);
+    }
+  }
+
+  function makeControl(id, text, title, handler) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.id = id;
+    button.textContent = text;
+    button.title = title;
+    button.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      handler();
+    });
+    return button;
+  }
+
+  function ensurePlayerButtons(root) {
+    if (!CONFIG.addPlayerButtons) return;
+    const container = root.querySelector('#top-level-buttons-computed');
+    if (!container) return;
+    if (container.querySelector('#yt-extra-controls')) { updateSpeedUI(); return; }
+
+    const group = document.createElement('div');
+    group.id = 'yt-extra-controls';
+    const label = document.createElement('span');
+    label.id = 'cr-speed-label';
+    group.appendChild(makeControl('cr-speed-down', '−', 'Decrease playback speed', () => stepSpeed(-1)));
+    group.appendChild(label);
+    group.appendChild(makeControl('cr-speed-up', '+', 'Increase playback speed', () => stepSpeed(1)));
+    group.appendChild(makeControl('cr-quality', 'HD', 'Quality settings', openQualityMenu));
+    group.appendChild(makeControl('cr-screenshot', '▣', 'Save current frame as PNG', captureFrame));
+    container.insertBefore(group, container.firstChild);
+    updateSpeedUI();
   }
 
   function apply() {
@@ -205,6 +330,7 @@
 
     // Current YouTube: everything is in the light DOM. Older versions: shadow DOM.
     const root = flexy.shadowRoot || document;
+    ensurePlayerButtons(root);
 
     let comments = root.querySelector('#comments') || root.querySelector('ytd-comments');
     let column = root.querySelector('#secondary');

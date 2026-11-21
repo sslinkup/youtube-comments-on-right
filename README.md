@@ -10,6 +10,7 @@ A userscript that moves YouTube's comments section into the right-hand column ne
 - Locks the watch page to the viewport so it can't scroll.
 - Splits the right column into a **pinned comments pane** and a **separately scrolling recommendations pane** below it.
 - Caps the video description to a scrollable box (auto-expands it first).
+- Adds **speed down / speed up / quality / screenshot** buttons directly before the Like button.
 - Moves the playlist panel above the comments and caps its item list to a scrollable height.
 - Keeps YouTube's lazy loading of additional comments working.
 - Survives YouTube's in-page (SPA) navigation and **restores normal page scrolling** when you leave a video for Home, Channel, or Library.
@@ -49,6 +50,7 @@ Edit the `CONFIG` object near the top of the script:
 | `pinnedComments` | `true` | Pin comments at the top and scroll recommendations in a separate pane below. |
 | `commentsFlex` | `1` | Relative height share of the comments pane. |
 | `recsFlex` | `1` | Relative height share of the recommendations pane. |
+| `addPlayerButtons` | `true` | Add speed down/up, quality, and screenshot buttons before Like. |
 
 ## Troubleshooting
 
