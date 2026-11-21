@@ -1,17 +1,19 @@
 // ==UserScript==
 // @name         YouTube: Comments on the Right
 // @namespace    https://github.com/sslinkup/youtube-comments-on-right
-// @version      4.0.0
+// @version      4.0.1
 // @description  Moves comments next to the video, locks the page, and gives the right column its own scrollbar.
 // @author       sslinkup
 // @license      MIT
 // @homepage     https://github.com/sslinkup/youtube-comments-on-right
 // @source       https://github.com/sslinkup/youtube-comments-on-right/raw/main/youtube-comments-right.user.js
 // @supportURL   https://github.com/sslinkup/youtube-comments-on-right/issues
-// @match        https://www.youtube.com/watch*
-// @match        https://youtube.com/watch*
+// @match        https://www.youtube.com/watch?*
+// @match        https://youtube.com/watch?*
 // @grant        none
 // @run-at       document-idle
+// Security: no network requests, no storage access, no privileged APIs,
+// no eval/innerHTML. Only moves a DOM node and injects static CSS.
 // ==/UserScript==
 
 (function () {
@@ -23,22 +25,32 @@
     lockPage: true,            // stop the whole page from scrolling
     scrollableSidebar: true,   // right column scrolls independently
     topOffset: 56,             // YouTube masthead height in px
-    showDebugBadge: true,      // set false once everything works
+    showDebugBadge: false,     // set true to show the diagnostic badge
   };
 
   const COMMENT_SELECTORS = ['#comments', 'ytd-comments', 'ytd-comments-renderer'];
   const COLUMN_SELECTORS = ['#secondary', '#right-column', 'ytd-watch-next-secondary-results-renderer'];
 
-  let scheduled = false;
+  let applyTimer = null;
   let lastStatus = '';
+  let lastDeepSearch = 0;
 
+  // Trailing debounce: coalesce YouTube's burst of DOM mutations into one run.
   function scheduleApply() {
-    if (scheduled) return;
-    scheduled = true;
-    requestAnimationFrame(() => {
-      scheduled = false;
+    if (applyTimer) return;
+    applyTimer = setTimeout(() => {
+      applyTimer = null;
       try { apply(); } catch (e) { status('ERROR: ' + e.message); console.error(e); }
-    });
+    }, 300);
+  }
+
+  // The deep shadow-root search is only a fallback for redesigned layouts.
+  // Rate-limit it so a broken layout can't cause a full DOM walk every tick.
+  function deepFindLimited(root, selectors) {
+    const now = Date.now();
+    if (now - lastDeepSearch < 5000) return null;
+    lastDeepSearch = now;
+    return deepFind(root, selectors);
   }
 
   function status(msg) {
@@ -119,8 +131,8 @@
     let comments = root.querySelector('#comments') || root.querySelector('ytd-comments');
     let column = root.querySelector('#secondary');
 
-    if (!comments) comments = deepFind(document, COMMENT_SELECTORS);
-    if (!column) column = deepFind(document, COLUMN_SELECTORS);
+    if (!comments) comments = deepFindLimited(document, COMMENT_SELECTORS);
+    if (!column) column = deepFindLimited(document, COLUMN_SELECTORS);
 
     if (!comments) { status('waiting: comments not found'); return; }
     if (!column) { status('column #secondary NOT FOUND — structure changed'); return; }
@@ -152,6 +164,6 @@
   observer.observe(document.documentElement, { childList: true, subtree: true });
   document.addEventListener('yt-navigate-finish', scheduleApply);
   document.addEventListener('yt-page-data-updated', scheduleApply);
-  setInterval(scheduleApply, 1500);
+  setInterval(scheduleApply, 3000);
   apply();
 })();

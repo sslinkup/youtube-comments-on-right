@@ -38,7 +38,7 @@ Edit the `CONFIG` object near the top of the script:
 | `lockPage` | `true` | Prevent the whole page from scrolling. Set `false` to restore normal page scrolling. |
 | `scrollableSidebar` | `true` | Give the right column its own scrollbar. |
 | `topOffset` | `56` | Height of YouTube's masthead in pixels; used to size the column. |
-| `showDebugBadge` | `true` | Show the green status badge. Set `false` for a clean look. |
+| `showDebugBadge` | `false` | Set `true` to show the green diagnostic badge when troubleshooting. |
 
 ## Troubleshooting
 
@@ -61,6 +61,12 @@ If a YouTube redesign breaks it, the selectors to check are in the `apply()` fun
 ## Publishing notes
 
 Replace `YOUR_USERNAME` in the userscript header's `@namespace`, `@author`, `@homepage`, `@source`, and `@supportURL` with your GitHub username before publishing. Bump `@version` for every release so users get update notifications.
+
+## Security and privacy
+
+The script makes **no network requests** (no `fetch`, `XMLHttpRequest`, or `GM_xmlhttpRequest`), reads **no credentials or storage** (cookies, `localStorage`, form values), and uses **no privileged APIs**. It contains no `eval` or `innerHTML`. It only moves an existing DOM node and injects a static `<style>` block, and is restricted to YouTube watch pages by `@match`.
+
+As with any userscript, the main risks are supply-chain related: keep 2FA enabled on the publishing GitHub account and review version changes before allowing auto-updates.
 
 ## License
 
