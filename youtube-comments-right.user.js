@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         YouTube: Comments on the Right
 // @namespace    https://github.com/sslinkup/youtube-comments-on-right
-// @version      4.3.0
+// @version      4.4.0
 // @description  Moves comments next to the video, locks the page, and gives the right column its own scrollbar.
 // @author       sslinkup
 // @license      MIT
@@ -32,9 +32,13 @@
     playlistOnTop: true,          // move the playlist above the comments
     playlistItemsHeight: 160,     // height of the playlist's internal scroller in px
     pinnedComments: true,         // pin comments at top, scroll recommendations below
-    commentsFlex: 1,              // relative height of the comments pane
+    commentsFlex: 2,              // relative height of the comments pane
     recsFlex: 1,                  // relative height of the recommendations pane
     addPlayerButtons: true,       // add speed / quality / screenshot buttons near Like
+    speedStep: 0.1,               // playback speed increment per click
+    speedMin: 0.1,                // minimum playback speed
+    speedMax: 2,                  // maximum playback speed
+    screenshotToClipboard: true,  // copy screenshot to clipboard instead of downloading
   };
 
   const COMMENT_SELECTORS = ['#comments', 'ytd-comments', 'ytd-comments-renderer'];
@@ -233,13 +237,21 @@
     return el && typeof el.getPlayer === 'function' ? el.getPlayer() : null;
   }
 
+  function getRates() {
+    const rates = [];
+    for (let r = CONFIG.speedMin; r <= CONFIG.speedMax + 1e-9; r += CONFIG.speedStep) {
+      rates.push(Math.round(r * 100) / 100);
+    }
+    return rates;
+  }
+
   function updateSpeedUI() {
     const player = getPlayer();
     const label = document.getElementById('cr-speed-label');
     const down = document.getElementById('cr-speed-down');
     const up = document.getElementById('cr-speed-up');
     if (!player || !label) return;
-    const rates = (player.getAvailablePlaybackRates() || [1]).slice().sort((a, b) => a - b);
+    const rates = getRates();
     const rate = player.getPlaybackRate();
     const index = rates.indexOf(rate);
     label.textContent = rate + '×';
@@ -250,7 +262,7 @@
   function stepSpeed(direction) {
     const player = getPlayer();
     if (!player) return;
-    const rates = (player.getAvailablePlaybackRates() || [1]).slice().sort((a, b) => a - b);
+    const rates = getRates();
     const index = rates.indexOf(player.getPlaybackRate());
     const next = rates[Math.min(Math.max(index + direction, 0), rates.length - 1)];
     player.setPlaybackRate(next);
@@ -270,7 +282,7 @@
     }, 80);
   }
 
-  function captureFrame() {
+  async function captureFrame() {
     const video = document.querySelector('video');
     if (!video || !video.videoWidth) return;
     try {
@@ -278,12 +290,26 @@
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
       canvas.getContext('2d').drawImage(video, 0, 0);
+      const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
+      if (!blob) return;
+
+      if (CONFIG.screenshotToClipboard && navigator.clipboard && window.ClipboardItem) {
+        try {
+          await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+          console.log('[comments-right] screenshot copied to clipboard');
+          return;
+        } catch (e) {
+          console.warn('[comments-right] clipboard failed, downloading instead:', e);
+        }
+      }
+
       const link = document.createElement('a');
-      link.href = canvas.toDataURL('image/png');
+      link.href = URL.createObjectURL(blob);
       link.download = 'youtube-frame-' + Date.now() + '.png';
       document.body.appendChild(link);
       link.click();
       link.remove();
+      setTimeout(() => URL.revokeObjectURL(link.href), 1000);
     } catch (e) {
       console.warn('[comments-right] screenshot failed:', e);
     }
@@ -317,7 +343,7 @@
     group.appendChild(label);
     group.appendChild(makeControl('cr-speed-up', '+', 'Increase playback speed', () => stepSpeed(1)));
     group.appendChild(makeControl('cr-quality', 'HD', 'Quality settings', openQualityMenu));
-    group.appendChild(makeControl('cr-screenshot', '▣', 'Save current frame as PNG', captureFrame));
+    group.appendChild(makeControl('cr-screenshot', '▣', CONFIG.screenshotToClipboard ? 'Copy current frame to clipboard' : 'Save current frame as PNG', captureFrame));
     container.insertBefore(group, container.firstChild);
     updateSpeedUI();
   }

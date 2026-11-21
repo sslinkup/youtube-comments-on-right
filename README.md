@@ -8,9 +8,10 @@ A userscript that moves YouTube's comments section into the right-hand column ne
 
 - Moves `#comments` into the secondary (right) column.
 - Locks the watch page to the viewport so it can't scroll.
-- Splits the right column into a **pinned comments pane** and a **separately scrolling recommendations pane** below it.
+- Splits the right column into a **pinned comments pane (2/3)** and a **separately scrolling recommendations pane (1/3)** below it.
 - Caps the video description to a scrollable box (auto-expands it first).
 - Adds **speed down / speed up / quality / screenshot** buttons directly before the Like button.
+- Speed changes in **0.1× steps**; the screenshot button **copies the current frame to the clipboard**.
 - Moves the playlist panel above the comments and caps its item list to a scrollable height.
 - Keeps YouTube's lazy loading of additional comments working.
 - Survives YouTube's in-page (SPA) navigation and **restores normal page scrolling** when you leave a video for Home, Channel, or Library.
@@ -48,9 +49,12 @@ Edit the `CONFIG` object near the top of the script:
 | `playlistOnTop` | `true` | Move the playlist panel above the comments. |
 | `playlistItemsHeight` | `160` | Height in pixels of the playlist's internal item scroller. |
 | `pinnedComments` | `true` | Pin comments at the top and scroll recommendations in a separate pane below. |
-| `commentsFlex` | `1` | Relative height share of the comments pane. |
-| `recsFlex` | `1` | Relative height share of the recommendations pane. |
+| `commentsFlex` | `2` | Relative height share of the comments pane (2 = two thirds). |
+| `recsFlex` | `1` | Relative height share of the recommendations pane (1 = one third). |
 | `addPlayerButtons` | `true` | Add speed down/up, quality, and screenshot buttons before Like. |
+| `speedStep` | `0.1` | Playback speed change per click. |
+| `speedMin` / `speedMax` | `0.1` / `2` | Playback speed range. |
+| `screenshotToClipboard` | `true` | Copy screenshot to clipboard; set `false` to download the PNG instead. |
 
 ## Troubleshooting
 
