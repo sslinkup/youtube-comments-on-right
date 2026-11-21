@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         YouTube: Comments on the Right
 // @namespace    https://github.com/sslinkup/youtube-comments-on-right
-// @version      4.4.0
+// @version      4.5.0
 // @description  Moves comments next to the video, locks the page, and gives the right column its own scrollbar.
 // @author       sslinkup
 // @license      MIT
@@ -232,6 +232,18 @@
     host.appendChild(style);
   }
 
+  const QUALITY_LABELS = {
+    hd2160: '2160p',
+    hd1440: '1440p',
+    hd1080: '1080p',
+    hd720: '720p',
+    large: '480p',
+    medium: '360p',
+    small: '240p',
+    tiny: '144p',
+    auto: 'Auto',
+  };
+
   function getPlayer() {
     const el = document.querySelector('ytd-player');
     return el && typeof el.getPlayer === 'function' ? el.getPlayer() : null;
@@ -257,6 +269,15 @@
     label.textContent = rate + '×';
     if (down) down.disabled = index <= 0;
     if (up) up.disabled = index < 0 || index >= rates.length - 1;
+  }
+
+  function updateQualityLabel() {
+    const button = document.getElementById('cr-quality');
+    const player = getPlayer();
+    if (!button || !player) return;
+    const quality = player.getPlaybackQuality();
+    const label = QUALITY_LABELS[quality] || String(quality || 'HD').toUpperCase();
+    if (button.textContent !== label) button.textContent = label;
   }
 
   function stepSpeed(direction) {
@@ -315,11 +336,34 @@
     }
   }
 
+  function cameraIcon() {
+    const ns = 'http://www.w3.org/2000/svg';
+    const svg = document.createElementNS(ns, 'svg');
+    svg.setAttribute('viewBox', '0 0 24 24');
+    svg.setAttribute('width', '18');
+    svg.setAttribute('height', '18');
+    svg.setAttribute('fill', 'none');
+    svg.setAttribute('stroke', 'currentColor');
+    svg.setAttribute('stroke-width', '2');
+    svg.setAttribute('stroke-linecap', 'round');
+    svg.setAttribute('stroke-linejoin', 'round');
+    const body = document.createElementNS(ns, 'path');
+    body.setAttribute('d', 'M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z');
+    const lens = document.createElementNS(ns, 'circle');
+    lens.setAttribute('cx', '12');
+    lens.setAttribute('cy', '13');
+    lens.setAttribute('r', '4');
+    svg.appendChild(body);
+    svg.appendChild(lens);
+    return svg;
+  }
+
   function makeControl(id, text, title, handler) {
     const button = document.createElement('button');
     button.type = 'button';
     button.id = id;
-    button.textContent = text;
+    if (text instanceof Node) button.appendChild(text);
+    else button.textContent = text;
     button.title = title;
     button.addEventListener('click', (event) => {
       event.preventDefault();
@@ -343,9 +387,10 @@
     group.appendChild(label);
     group.appendChild(makeControl('cr-speed-up', '+', 'Increase playback speed', () => stepSpeed(1)));
     group.appendChild(makeControl('cr-quality', 'HD', 'Quality settings', openQualityMenu));
-    group.appendChild(makeControl('cr-screenshot', '▣', CONFIG.screenshotToClipboard ? 'Copy current frame to clipboard' : 'Save current frame as PNG', captureFrame));
+    group.appendChild(makeControl('cr-screenshot', cameraIcon(), CONFIG.screenshotToClipboard ? 'Copy current frame to clipboard' : 'Save current frame as PNG', captureFrame));
     container.insertBefore(group, container.firstChild);
     updateSpeedUI();
+    updateQualityLabel();
   }
 
   function apply() {
@@ -357,6 +402,7 @@
     // Current YouTube: everything is in the light DOM. Older versions: shadow DOM.
     const root = flexy.shadowRoot || document;
     ensurePlayerButtons(root);
+    updateQualityLabel();
 
     let comments = root.querySelector('#comments') || root.querySelector('ytd-comments');
     let column = root.querySelector('#secondary');

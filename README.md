@@ -11,7 +11,7 @@ A userscript that moves YouTube's comments section into the right-hand column ne
 - Splits the right column into a **pinned comments pane (2/3)** and a **separately scrolling recommendations pane (1/3)** below it.
 - Caps the video description to a scrollable box (auto-expands it first).
 - Adds **speed down / speed up / quality / screenshot** buttons directly before the Like button.
-- Speed changes in **0.1× steps**; the screenshot button **copies the current frame to the clipboard**.
+- Speed changes in **0.1× steps**; the quality button shows the **current resolution**; the screenshot button uses a camera icon and **copies the current frame to the clipboard**.
 - Moves the playlist panel above the comments and caps its item list to a scrollable height.
 - Keeps YouTube's lazy loading of additional comments working.
 - Survives YouTube's in-page (SPA) navigation and **restores normal page scrolling** when you leave a video for Home, Channel, or Library.
