@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         YouTube: Comments on the Right
 // @namespace    https://github.com/sslinkup/youtube-comments-on-right
-// @version      4.1.0
+// @version      4.1.1
 // @description  Moves comments next to the video, locks the page, and gives the right column its own scrollbar.
 // @author       sslinkup
 // @license      MIT
@@ -39,6 +39,26 @@
   let applyTimer = null;
   let lastStatus = '';
   let lastDeepSearch = 0;
+  const hiddenEls = new Set();
+
+  function isWatchPage() {
+    return /^\/watch\/?$/.test(location.pathname);
+  }
+
+  // YouTube navigates via AJAX, so our <style> would otherwise survive on
+  // Home / Channel / Library pages and keep them from scrolling.
+  function restorePage() {
+    const style = document.getElementById('yt-comments-right-style');
+    if (style) style.remove();
+    const badge = document.getElementById('yt-comments-right-badge');
+    if (badge) badge.remove();
+    document.querySelectorAll('ytd-watch-flexy').forEach((f) => {
+      f.style.removeProperty('--ytd-watch-flexy-sidebar-width');
+    });
+    hiddenEls.forEach((el) => { el.style.display = ''; });
+    hiddenEls.clear();
+    lastStatus = '';
+  }
 
   // Trailing debounce: coalesce YouTube's burst of DOM mutations into one run.
   function scheduleApply() {
@@ -142,6 +162,8 @@
   }
 
   function apply() {
+    if (!isWatchPage()) { restorePage(); return; }
+
     const flexy = document.querySelector('ytd-watch-flexy');
     if (!flexy) { status('waiting: no ytd-watch-flexy'); return; }
 
@@ -184,7 +206,10 @@
 
     if (CONFIG.hideRecommendations) {
       target.querySelectorAll(':scope > :not(#comments):not(ytd-playlist-panel-renderer#playlist)').forEach((el) => {
-        if (el.style.display !== 'none') el.style.display = 'none';
+        if (el.style.display !== 'none') {
+          el.style.display = 'none';
+          hiddenEls.add(el);
+        }
       });
     }
 
@@ -198,6 +223,7 @@
   observer.observe(document.documentElement, { childList: true, subtree: true });
   document.addEventListener('yt-navigate-finish', scheduleApply);
   document.addEventListener('yt-page-data-updated', scheduleApply);
+  window.addEventListener('popstate', scheduleApply);
   setInterval(scheduleApply, 3000);
   apply();
 })();

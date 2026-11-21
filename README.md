@@ -12,7 +12,7 @@ A userscript that moves YouTube's comments section into the right-hand column ne
 - Caps the video description to a scrollable box (auto-expands it first).
 - Moves the playlist panel above the comments and caps its item list to a scrollable height.
 - Keeps YouTube's lazy loading of additional comments working.
-- Survives YouTube's in-page (SPA) navigation.
+- Survives YouTube's in-page (SPA) navigation and **restores normal page scrolling** when you leave a video for Home, Channel, or Library.
 - Supports both the current light-DOM watch page and older shadow-DOM layouts.
 - Small on-page debug badge that reports what the script found.
 
